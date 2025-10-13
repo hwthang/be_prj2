@@ -33,6 +33,10 @@ class ChapterService {
     return await Chapter.findOne(key);
   };
 
+  getAllChapters = async()=>{
+    return await Chapter.find()
+  }
+
   // Kiểm tra hợp lệ Chapter
   isValidChapter = async (input, isUpdating = false) => {
     const { chapterCode, name, affiliated, office } = input;

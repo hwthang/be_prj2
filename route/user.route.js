@@ -5,10 +5,18 @@ import { verifyToken } from "../middleware/auth.middleware.js";
 const UserRoute = express.Router();
 
 UserRoute.post("/", userController.createNewUser);
-UserRoute.get("/", verifyToken, userController.getUsers);
-UserRoute.get("/:username", verifyToken, userController.getUserWithUsername)
-UserRoute.put("/:username", verifyToken, userController.updateUserWithUsername)
-UserRoute.patch("/active/:username", userController.activeUserWithUsename)
-UserRoute.patch("/lock/:username", userController.lockUserWithUsername)
+UserRoute.get(
+  "/",
+  //  verifyToken,
+  userController.getUsers
+);
+UserRoute.get("/:id", userController.getUser);
+UserRoute.put(
+  "/:id",
+  // verifyToken,
+  userController.updateUserWithUsername
+);
+UserRoute.patch("/active/:id", userController.activeUser);
+UserRoute.patch("/lock/:id", userController.lockUser);
 
 export default UserRoute;

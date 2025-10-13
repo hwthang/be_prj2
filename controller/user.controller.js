@@ -1,39 +1,44 @@
 import chapterService from "../service/chapter.service.js";
 import userService from "../service/user.service.js";
+import ResponseBuilder from "../utils/response.helper.js";
 
 class UserController {
   getUsers = async (req, res) => {
-    const options = req.query;
-    const user = req.user;
-    console.log(user);
+    try {
 
-    let result = [];
+      const result = await
 
-    if (user.role == "admin")
-      result = await userService.getUsersForAdmin(options);
-    if (user.role == "manager") {
-      const chapter = await chapterService.getChapterWithKey({
-        managerId: user.id,
-      });
 
-      console.log(chapter);
-      result = await userService.getUsersForManager(
-        chapter.chapterCode,
-        options
-      );
+    } catch (error) {
+      console.log(error);
+      const errorRes = ResponseBuilder.error(error.message);
+      errorRes.send(res);
+      return;
     }
-
-    res.send(result);
   };
 
-  getUserWithUsername = async (req, res) => {
-    const username = req.params.username;
-    const user = req.user;
+  getUser = async (req, res) => {
+    const id = req.params.id;
+    // const user = req.user;
 
-    if (user.username != username && !["admin", "manager"].includes(user.role))
-      res.send("Bạn không có quyền truy cập");
+    // if (user.username != username && !["admin", "manager"].includes(user.role))
+    //   res.send("Bạn không có quyền truy cập");
 
-    const result = await userService.getUserWithKey({ username: username });
+    const data = await userService.getUserWithKey({ _id: id });
+
+    const result = data.toObject();
+    result.chapter = null;
+    if (result.chapterCode) {
+      const chapter = await chapterService.getChapterWithKey({
+        chapterCode: result.chapterCode,
+      });
+
+      result.chapter = { code: chapter.chapterCode, name: chapter.name };
+    }
+
+    delete result.chapterCode;
+    console.log(result);
+
     res.send(result);
   };
 
@@ -58,17 +63,18 @@ class UserController {
 
   updateUserWithUsername = async (req, res) => {
     const updatingUser = await userService.getUserWithKey({
-      username: req.params.username,
+      _id: req.params.id,
     });
 
     const input = req.body;
+    console.log(input);
 
-    if (
-      req.user.username != updatingUser.username &&
-      !["admin", "manager"].includes(req.user.role)
-    ) {
-      res.send("Bạn không có quyền truy cập");
-    }
+    // if (
+    //   req.user.username != updatingUser.username &&
+    //   !["admin", "manager"].includes(req.user.role)
+    // ) {
+    //   res.send("Bạn không có quyền truy cập");
+    // }
 
     const role = updatingUser.role;
     switch (role) {
@@ -90,16 +96,16 @@ class UserController {
     }
   };
 
-  activeUserWithUsename = async (req, res) => {
-    const username = req.params.username;
-    const result = await userService.activeUser({ username: username });
+  activeUser = async (req, res) => {
+    const id = req.params.id;
+    const result = await userService.activeUser({ _id: id });
     res.send(result);
     return;
   };
 
-  lockUserWithUsername = async (req, res) => {
-    const username = req.params.username;
-    const result = await userService.lockUser({ username: username });
+  lockUser = async (req, res) => {
+    const id = req.params.id;
+    const result = await userService.lockUser({ _id: id });
     res.send(result);
     return;
   };

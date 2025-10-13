@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import cors from "cors"
 import UserRoute from "./route/user.route.js";
 import ChapterRoute from "./route/chapter.route.js";
 import AuthRoute from "./route/auth.route.js";
@@ -10,7 +11,7 @@ import userService from "./service/user.service.js";
 dotenv.config();
 
 const app = express();
-
+app.use(cors())
 // Middleware
 app.use(express.json());
 app.use(morgan("dev"));

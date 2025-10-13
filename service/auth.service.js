@@ -1,5 +1,6 @@
 import bcryptHelper from "../utils/bcrypt.helper.js";
 import jwtHelper from "../utils/jwt.helper.js";
+import ResponseBuilder from "../utils/response.helper.js";
 import userService from "./user.service.js";
 
 class AuthService {
@@ -18,20 +19,23 @@ class AuthService {
 
     console.log(user);
 
-    if (!user) return "Sai tài khoản hoặc mật khẩu";
+    if (!user) return ResponseBuilder.error("Không tìm thấy người dùng");
 
     const isMatch = await bcryptHelper.comparePassword(password, user.password);
 
-    if (!isMatch) return "Sai tài khoản hoặc mật khẩu";
+    if (!isMatch) return ResponseBuilder.error("Tài khoản hoặc mật khẩu không khớp");
 
     const token = jwtHelper.signToken({ id: user.id });
 
-    return token;
+    const result = ResponseBuilder.success("Đăng nhập thành công");
+    result.data = { token, role: user.role };
+
+    return result;
   };
 
   register = async (input) => {
-    const result = userService.createNewMember(input);
-    if (result.status == "pending") result.status = "active";
+    const result = await userService.createNewMember(input);
+
     return result;
   };
 }

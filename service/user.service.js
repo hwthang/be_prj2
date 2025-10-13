@@ -1,5 +1,6 @@
 import User from "../model/user.model.js";
 import bcryptHelper from "../utils/bcrypt.helper.js";
+import ResponseBuilder from "../utils/response.helper.js";
 import chapterService from "./chapter.service.js";
 
 const ROLE = ["admin", "manager", "member"];
@@ -72,33 +73,45 @@ class UserService {
   };
 
   getUsersForAdmin = async (options) => {
-    const { search, role, status, limit = 10, page = 1 } = options;
+    const {
+      search,
+      role,
+      status,
+      // limit = 10, page = 1
+    } = options;
 
     const filter = {};
 
-    if (role) filter.role = role;
-    if (status) filter.status = status;
+    console.log(role);
+
+    if (role) filter.role = Array.isArray(role) ? { $in: role } : role;
+    if (status)
+      filter.status = Array.isArray(status) ? { $in: status } : status;
 
     // Tìm kiếm username hoặc fullname
     if (search) {
       const searchRegex = { $regex: search, $options: "i" };
       filter.$or = [{ username: searchRegex }, { fullname: searchRegex }];
     }
+    console.log(filter);
 
     // Paging
-    const skip = (page - 1) * limit;
+    // const skip = (page - 1) * limit;
 
     // Lấy dữ liệu
     const users = await User.find(filter)
-      .skip(skip)
-      .limit(limit)
+      // .skip(skip)
+      // .limit(limit)
       // .select("username email role status fullname avatar")
       .sort({ createdAt: -1 }); // sắp xếp mới nhất trước
 
     // Tổng số bản ghi (nếu cần để paging)
     const total = await User.countDocuments(filter);
 
-    return { total, users };
+    const result = ResponseBuilder.success()
+    result.data = users
+
+    return result
   };
 
   getUsersForManager = async (chapterCode, options) => {
@@ -285,7 +298,7 @@ class UserService {
 
   createNewMember = async (input) => {
     const valid = await this.isValidMember(input);
-    if (valid !== true) return valid;
+    if (valid !== true) return ResponseBuilder.error(valid);
 
     const {
       username,
@@ -317,7 +330,11 @@ class UserService {
       role: "member",
     });
 
-    const result = await member.save();
+    const newMember = await member.save();
+
+    const result = ResponseBuilder.success();
+    result.data = newMember;
+
     return result;
   };
 
@@ -372,6 +389,7 @@ class UserService {
       address,
       cardCode,
       joinedDate,
+      position,
     } = input;
 
     if (username) member.username = username;
@@ -383,6 +401,7 @@ class UserService {
     if (address) member.address = address;
     if (cardCode) member.cardCode = cardCode;
     if (joinedDate) member.joinedDate = joinedDate;
+    if (position) member.position = position;
 
     const result = await member.save();
     return result;
@@ -393,7 +412,8 @@ class UserService {
     if (!user) return "Người dùng không tồn tại";
 
     user.status = "active";
-    return await user.save();
+    await user.save();
+    return;
   };
 
   lockUser = async (key) => {
@@ -401,7 +421,8 @@ class UserService {
     if (!user) return "Người dùng không tồn tại";
 
     user.status = "locked";
-    return await user.save();
+    await user.save();
+    return;
   };
 }
 
