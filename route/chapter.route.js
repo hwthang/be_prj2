@@ -1,8 +1,13 @@
-import express from "express"
-import chapterController from "../controller/chapter.controller.js"
+import express from "express";
+import chapterController from "../controller/chapter.controller.js";
 
-const ChapterRoute = express.Router()
+const ChapterRoute = express.Router();
 
-ChapterRoute.post("/", chapterController.createNewChapter)
+ChapterRoute.post("/", chapterController.createChapter);
+ChapterRoute.get("/", chapterController.getChapters);
+ChapterRoute.get("/:id", chapterController.getChapter);
+ChapterRoute.put("/:id", chapterController.updateChapter);
+ChapterRoute.patch("/:id/active", chapterController.activeChapter);
+ChapterRoute.patch("/:id/lock", chapterController.lockChapter);
 
-export default ChapterRoute
+export default ChapterRoute;

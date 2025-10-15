@@ -1,428 +1,212 @@
-import User from "../model/user.model.js";
+import Account from "../model/account.model.js";
+import Profile from "../model/profile.model.js";
 import bcryptHelper from "../utils/bcrypt.helper.js";
-import ResponseBuilder from "../utils/response.helper.js";
-import chapterService from "./chapter.service.js";
-
-const ROLE = ["admin", "manager", "member"];
-const GENDER = ["male", "female"];
-const POSITION = ["bi_thu", "pho_bi_thu", "doan_vien"];
+import validatorHelper from "../utils/validator.helper.js";
 
 class UserService {
-  isValidUsername = (username) => {
-    if (!username) return false;
-    return true;
-  };
+  // 🧩 Tạo người dùng mới
+  createUser = async (input) => {
+    try {
+      const { account, profile } = input;
 
-  isValidEmail = (email) => {
-    if (!email) return false;
-    return true;
-  };
-
-  isValidPhone = (phone) => {
-    if (!phone) return false;
-    return true;
-  };
-
-  isValidPassword = (password) => {
-    if (!password) return false;
-    return true;
-  };
-
-  isValidRole = (role) => {
-    if (ROLE.includes(role)) return true;
-    return false;
-  };
-
-  isValidFullname = (fullname) => {
-    if (!fullname) return false;
-    return true;
-  };
-
-  isValidBirthdate = (date) => {
-    if (!date) return false;
-    return true;
-  };
-
-  isValidGender = (gender) => {
-    if (!GENDER.includes(gender)) return false;
-    return true;
-  };
-
-  isValidAddress = (address) => {
-    if (!address) return false;
-    return true;
-  };
-
-  isValidCardCode = (code) => {
-    if (!code) return false;
-    return true;
-  };
-
-  isValidJoinedDate = (date) => {
-    if (!date) return false;
-    return true;
-  };
-
-  isValidPosition = (position) => {
-    if (!POSITION.includes(position)) return false;
-    return true;
-  };
-
-  getUserWithKey = async (key) => {
-    return await User.findOne(key);
-  };
-
-  getUsersForAdmin = async (options) => {
-    const {
-      search,
-      role,
-      status,
-      // limit = 10, page = 1
-    } = options;
-
-    const filter = {};
-
-    console.log(role);
-
-    if (role) filter.role = Array.isArray(role) ? { $in: role } : role;
-    if (status)
-      filter.status = Array.isArray(status) ? { $in: status } : status;
-
-    // Tìm kiếm username hoặc fullname
-    if (search) {
-      const searchRegex = { $regex: search, $options: "i" };
-      filter.$or = [{ username: searchRegex }, { fullname: searchRegex }];
-    }
-    console.log(filter);
-
-    // Paging
-    // const skip = (page - 1) * limit;
-
-    // Lấy dữ liệu
-    const users = await User.find(filter)
-      // .skip(skip)
-      // .limit(limit)
-      // .select("username email role status fullname avatar")
-      .sort({ createdAt: -1 }); // sắp xếp mới nhất trước
-
-    // Tổng số bản ghi (nếu cần để paging)
-    const total = await User.countDocuments(filter);
-
-    const result = ResponseBuilder.success()
-    result.data = users
-
-    return result
-  };
-
-  getUsersForManager = async (chapterCode, options) => {
-    const { search, status, limit = 10, page = 1 } = options;
-
-    const chapter = await chapterService.getChapterWithKey({
-      chapterCode: chapterCode,
-    });
-
-    const filter = {};
-
-    filter.chapterCode = chapter.chapterCode;
-    filter.role = "member";
-    if (status) filter.status = status;
-
-    // Tìm kiếm username hoặc fullname
-    if (search) {
-      const searchRegex = { $regex: search, $options: "i" };
-      filter.fullname = searchRegex;
-    }
-
-    // Paging
-    const skip = (page - 1) * limit;
-
-    // Lấy dữ liệu
-    const users = await User.find(filter)
-      .skip(skip)
-      .limit(limit)
-      // .select("avatar fullname gender birthdate position status")
-      .sort({ createdAt: -1 }); // sắp xếp mới nhất trước
-
-    // Tổng số bản ghi (nếu cần để paging)
-    const total = await User.countDocuments(filter);
-
-    return { total, users };
-  };
-  isValidAdmin = async (input, isUpdating = false) => {
-    const { username, email, phone, password } = input;
-
-    if (!isUpdating || username) {
-      if (!this.isValidUsername(username)) return "Tên người dùng không hợp lệ";
-      if (await this.getUserWithKey({ username }))
+      if (
+        await validatorHelper.checkDuplicatedKey(
+          Account,
+          "username",
+          account?.username
+        )
+      )
         return "Tên người dùng đã được sử dụng";
-    }
 
-    if (!isUpdating || email) {
-      if (!this.isValidEmail(email)) return "Email không hợp lệ";
-      if (await this.getUserWithKey({ email })) return "Email đã được sử dụng";
-    }
+      if (
+        await validatorHelper.checkDuplicatedKey(
+          Account,
+          "email",
+          account?.email
+        )
+      )
+        return "Email đã được sử dụng";
 
-    if (!isUpdating || phone) {
-      if (!this.isValidPhone(phone)) return "Số điện thoại không hợp lệ";
-      if (await this.getUserWithKey({ phone }))
+      if (
+        await validatorHelper.checkDuplicatedKey(
+          Account,
+          "phone",
+          account?.phone
+        )
+      )
         return "Số điện thoại đã được sử dụng";
-    }
 
-    if (!isUpdating || password) {
-      if (!this.isValidPassword(password)) return "Mật khẩu không hợp lệ";
-    }
+      // 🔹 Khởi tạo tài khoản
+      const newAccount = new Account(account);
+      newAccount.password = await bcryptHelper.hashPassword(account.password);
+      console.log(input);
 
-    return true; // hợp lệ
+      // 🔹 Nếu có thông tin hồ sơ thì tạo profile và liên kết
+      if (profile) {
+        const newProfile = new Profile(profile);
+        newAccount.profile = newProfile.id;
+        await newProfile.save();
+      }
+
+      // 🔹 Lưu tài khoản
+      await newAccount.save();
+
+      // 🔹 Populate lại để trả về dữ liệu đầy đủ
+      const newUser = await Account.findOne({ _id: newAccount.id });
+
+      console.log(newUser);
+
+      return newUser;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi tạo người dùng";
+    }
   };
 
-  isValidManager = async (input, isUpdating = false) => {
-    const { username, password } = input;
+  // 🧩 Lấy danh sách người dùng
+  getUsers = async () => {
+    try {
+      const accounts = await Account.find().populate("profile");
 
-    if (!isUpdating || username) {
-      if (!this.isValidUsername(username)) return "Tên người dùng không hợp lệ";
-      if (await this.getUserWithKey({ username }))
-        return "Tên người dùng đã được sử dụng";
+      const users = accounts.map((item) => ({
+        id: item.id,
+        avatar: item.profile?.avatar?.path,
+        fullname: item.profile?.fullname || "Chưa có",
+        username: item.username,
+        role: item.role,
+        status: item.status,
+      }));
+
+      return users;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi lấy danh sách tài khoản";
     }
-
-    if (!isUpdating || password) {
-      if (!this.isValidPassword(password)) return "Mật khẩu không hợp lệ";
-    }
-
-    return true;
   };
 
-  isValidMember = async (input, isUpdating = false) => {
-    const {
-      username,
-      email,
-      phone,
-      password,
-      fullname,
-      birthdate,
-      gender,
-      address,
-      cardCode,
-      joinedDate,
-      chapterCode,
-    } = input;
+  // 🧩 Lấy thông tin người dùng chi tiết
+  getUser = async (id) => {
+    try {
+      const account = await Account.findOne({ _id: id }).populate({
+        path: "profile", // populate field 'profile' trong Account
+        populate: {
+          path: "chapter", // populate field 'chapter' trong Profile
+        },
+      });
+      return account;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi lấy thông tin tài khoản";
+    }
+  };
 
-    if (!isUpdating || username) {
-      if (!this.isValidUsername(username)) return "Tên người dùng không hợp lệ";
-      if (await this.getUserWithKey({ username }))
+  // 🧩 Cập nhật người dùng
+  updateUser = async (id, input) => {
+    try {
+      console.log(input);
+      if (
+        await validatorHelper.checkDuplicatedKey(
+          Account,
+          "username",
+          input?.account?.username
+        )
+      )
         return "Tên người dùng đã được sử dụng";
-    }
 
-    if (!isUpdating || email) {
-      if (!this.isValidEmail(email)) return "Email không hợp lệ";
-      if (await this.getUserWithKey({ email })) return "Email đã được sử dụng";
-    }
+      if (
+        await validatorHelper.checkDuplicatedKey(
+          Account,
+          "email",
+          input?.account?.email
+        )
+      )
+        return "Email đã được sử dụng";
 
-    if (!isUpdating || phone) {
-      if (!this.isValidPhone(phone)) return "Số điện thoại không hợp lệ";
-      if (await this.getUserWithKey({ phone }))
+      if (
+        await validatorHelper.checkDuplicatedKey(
+          Account,
+          "phone",
+          input?.account?.phone
+        )
+      )
         return "Số điện thoại đã được sử dụng";
-    }
 
-    if (!isUpdating || fullname) {
-      if (!this.isValidFullname(fullname)) return "Họ và tên không hợp lệ";
-    }
+      // 🔹 Cập nhật thông tin tài khoản
+      const account = await Account.findOne({ _id: id });
+      Object.entries(input.account).forEach(([key, value]) => {
+        if (value) account[key] = value;
+      });
 
-    if (!isUpdating || birthdate) {
-      if (!this.isValidBirthdate(birthdate)) return "Ngày sinh không hợp lệ";
-    }
+      // 🔹 Cập nhật thông tin hồ sơ nếu có
+      if (input?.profile) {
+        const profile = await Profile.findOne({ _id: account.profile });
 
-    if (!isUpdating || gender) {
-      if (!this.isValidGender(gender)) return "Giới tính không hợp lệ";
-    }
+        Object.entries(input.profile).forEach(([key, value]) => {
+          if (value) profile[key] = value;
+        });
+        console.log(profile);
+        await profile.save();
+      }
 
-    if (!isUpdating || address) {
-      if (!this.isValidAddress(address)) return "Địa chỉ không hợp lệ";
-    }
+      // 🔹 Lưu thay đổi tài khoản
+      await account.save();
 
-    if (!isUpdating || cardCode) {
-      if (!this.isValidCardCode(cardCode)) return "Số thẻ đoàn không hợp lệ";
-    }
+      // 🔹 Trả về dữ liệu cập nhật mới nhất
+      const updatedUser = await Account.findOne({
+        _id: account.id,
+      }).populate("profile");
 
-    if (!isUpdating || joinedDate) {
-      if (!this.isValidJoinedDate(joinedDate))
-        return "Ngày vào đoàn không hợp lệ";
+      return updatedUser;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi cập nhật tài khoản";
     }
-
-    if (!isUpdating || chapterCode) {
-      const chapter = await chapterService.getChapterWithKey({ chapterCode });
-      if (!chapter) return "Chi đoàn sinh hoạt không hợp lệ";
-    }
-
-    if (!isUpdating || password) {
-      if (!this.isValidPassword(password)) return "Mật khẩu không hợp lệ";
-    }
-
-    return true;
   };
 
-  createNewAdmin = async (input) => {
-    const valid = await this.isValidAdmin(input);
-    if (valid !== true) return valid; // nếu không hợp lệ, trả về thông báo lỗi
+  // 🧩 Kích hoạt người dùng
+  activeUser = async (id) => {
+    try {
+      const account = await Account.findOne({ _id: id });
+      account.status = "active";
 
-    const { username, email, phone, password } = input;
-
-    const admin = new User({
-      username,
-      email,
-      phone,
-      password: await bcryptHelper.hashPassword(password),
-      role: "admin",
-      status: "active",
-    });
-
-    const result = await admin.save();
-    return result;
+      const activeAccount = await account.save();
+      return activeAccount;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi kích hoạt tài khoản";
+    }
   };
 
-  createNewManager = async (input) => {
-    const valid = await this.isValidManager(input);
-    if (valid !== true) return valid;
+  // 🧩 Khóa người dùng
+  lockUser = async (id) => {
+    try {
+      const account = await Account.findOne({ _id: id });
+      account.status = "locked";
 
-    const { username, password } = input;
-
-    const manager = new User({
-      username,
-      password: await bcryptHelper.hashPassword(password),
-      role: "manager",
-      status: "active",
-    });
-
-    const result = await manager.save();
-    return result;
+      const lockedAccount = await account.save();
+      return lockedAccount;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi khóa tài khoản";
+    }
   };
 
-  createNewMember = async (input) => {
-    const valid = await this.isValidMember(input);
-    if (valid !== true) return ResponseBuilder.error(valid);
+  updateAvatar = async (id, avatar) => {
+    try {
+      const account = await Account.findOne({ _id: id });
+      console.log(account)
+      const profile = await Profile.findOne({ _id: account?.profile });
+      console.log(profile)
+      profile.avatar = avatar;
 
-    const {
-      username,
-      email,
-      phone,
-      password,
-      fullname,
-      birthdate,
-      gender,
-      address,
-      cardCode,
-      joinedDate,
-      chapterCode,
-    } = input;
+      await profile.save();
+      const newProfile = await Profile.findOne({ _id: account.profile });
 
-    const member = new User({
-      username,
-      email,
-      phone,
-      password: await bcryptHelper.hashPassword(password),
-      fullname,
-      birthdate,
-      gender,
-      address,
-      cardCode,
-      joinedDate,
-      chapterCode,
-      position: "doan_vien",
-      role: "member",
-    });
-
-    const newMember = await member.save();
-
-    const result = ResponseBuilder.success();
-    result.data = newMember;
-
-    return result;
-  };
-
-  updateAdmin = async (id, input) => {
-    // Kiểm tra hợp lệ
-    const valid = await this.isValidAdmin(input, true);
-    if (valid !== true) return valid;
-
-    const admin = await this.getUserWithKey({ _id: id });
-    if (!admin) return "Admin không tồn tại";
-
-    const { username, email, phone } = input;
-
-    if (username) admin.username = username;
-    if (email) admin.email = email;
-    if (phone) admin.phone = phone;
-
-    const result = await admin.save();
-    return result;
-  };
-
-  updateManager = async (id, input) => {
-    const valid = await this.isValidManager(input, true);
-    if (valid !== true) return valid;
-
-    const manager = await this.getUserWithKey({ _id: id });
-    if (!manager) return "Người dùng không tồn tại";
-
-    const { email, phone } = input;
-
-    if (email) manager.email = email;
-    if (phone) manager.phone = phone;
-
-    const result = await manager.save();
-    return result;
-  };
-
-  updateMember = async (id, input) => {
-    const valid = await this.isValidMember(input, true);
-    if (valid !== true) return valid;
-
-    const member = await this.getUserWithKey({ _id: id });
-    if (!member) return "Member không tồn tại";
-
-    const {
-      username,
-      email,
-      phone,
-      fullname,
-      birthdate,
-      gender,
-      address,
-      cardCode,
-      joinedDate,
-      position,
-    } = input;
-
-    if (username) member.username = username;
-    if (email) member.email = email;
-    if (phone) member.phone = phone;
-    if (fullname) member.fullname = fullname;
-    if (birthdate) member.birthdate = birthdate;
-    if (gender) member.gender = gender;
-    if (address) member.address = address;
-    if (cardCode) member.cardCode = cardCode;
-    if (joinedDate) member.joinedDate = joinedDate;
-    if (position) member.position = position;
-
-    const result = await member.save();
-    return result;
-  };
-
-  activeUser = async (key) => {
-    const user = await this.getUserWithKey(key);
-    if (!user) return "Người dùng không tồn tại";
-
-    user.status = "active";
-    await user.save();
-    return;
-  };
-
-  lockUser = async (key) => {
-    const user = await this.getUserWithKey(key);
-    if (!user) return "Người dùng không tồn tại";
-
-    user.status = "locked";
-    await user.save();
-    return;
+      return newProfile.avatar;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi cập nhật ảnh đại diện";
+    }
   };
 }
 

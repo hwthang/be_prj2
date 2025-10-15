@@ -1,21 +1,20 @@
 export default class ResponseBuilder {
-  constructor(success, message, data = null, errorCode = null, statusCode = 200) {
+  constructor(success, message, data = null, statusCode = 200) {
     this.success = success;
     this.message = message;
     this.data = data;
-    this.errorCode = errorCode;
     this.statusCode = statusCode;
     this.timestamp = new Date().toISOString();
   }
 
   // ✅ Thành công
   static success(message = "Thành công", data = null, statusCode = 200) {
-    return new ResponseBuilder(true, message, data, null, statusCode);
+    return new ResponseBuilder(true, message, data, statusCode);
   }
 
   // ❌ Thất bại
-  static error(message = "Thất bại", errorCode = "ERROR", statusCode = 200, data = null) {
-    return new ResponseBuilder(false, message, data, errorCode, statusCode);
+  static error(message = "Thất bại", data = null, statusCode = 200) {
+    return new ResponseBuilder(false, message, data, statusCode);
   }
 
   // ⚙️ Gửi ra response nếu có Express
@@ -25,7 +24,6 @@ export default class ResponseBuilder {
       success: this.success,
       message: this.message,
       data: this.data,
-      errorCode: this.errorCode,
       timestamp: this.timestamp,
     });
   }

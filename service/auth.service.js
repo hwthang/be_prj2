@@ -1,42 +1,52 @@
+import Account from "../model/account.model.js";
 import bcryptHelper from "../utils/bcrypt.helper.js";
 import jwtHelper from "../utils/jwt.helper.js";
-import ResponseBuilder from "../utils/response.helper.js";
 import userService from "./user.service.js";
 
 class AuthService {
-  login = async (credentials) => {
-    const { username, email, phone, password } = credentials;
+  getNameOfKey = (key) => {
+    try {
+      if (key.includes("@")) return "email";
+      if (/^\d+$/.test(key)) return "phone";
+      return "username";
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi lấy thông tin khóa";
+    }
+  };
 
-    const conditions = [];
+  login = async (input) => {
+    try {
+      const account = await Account.findOne({
+        [this.getNameOfKey(input.key)]: input.key,
+      });
 
-    if (username) conditions.push({ username });
-    if (email) conditions.push({ email });
-    if (phone) conditions.push({ phone });
+      if (account == null) return "Không tìm thấy tài khoản";
+      const isMatch = await bcryptHelper.comparePassword(
+        input.password,
+        account.password
+      );
 
-    const user = await userService.getUserWithKey({
-      $or: conditions,
-    });
+      if (!isMatch) return "Tài khoản hoặc mật khẩu không khớp";
 
-    console.log(user);
-
-    if (!user) return ResponseBuilder.error("Không tìm thấy người dùng");
-
-    const isMatch = await bcryptHelper.comparePassword(password, user.password);
-
-    if (!isMatch) return ResponseBuilder.error("Tài khoản hoặc mật khẩu không khớp");
-
-    const token = jwtHelper.signToken({ id: user.id });
-
-    const result = ResponseBuilder.success("Đăng nhập thành công");
-    result.data = { token, role: user.role };
-
-    return result;
+      const token = jwtHelper.signToken({ id: account.id });
+      return { token, role: account.role };
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi đăng nhập";
+    }
   };
 
   register = async (input) => {
-    const result = await userService.createNewMember(input);
+    try {
+      console.log(input)
 
-    return result;
+      const newMember = await userService.createUser(input);
+      return newMember
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi đăng ký người dùng";
+    }
   };
 }
 

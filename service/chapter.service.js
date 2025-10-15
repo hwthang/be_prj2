@@ -1,136 +1,98 @@
 import Chapter from "../model/chapter.model.js";
+import ResponseBuilder from "../utils/response.helper.js";
 import userService from "./user.service.js";
 
-const STATUS = ["active", "locked"];
-
 class ChapterService {
-  isValidChapterCode = (code) => {
-    if (!code) return false;
-    return true;
-  };
+  createChapter = async (input) => {
+    try {
+      const { chapter, manager } = input;
+      const newChapter = new Chapter(chapter);
+      newChapter.status = "active";
+      const newManager = await userService.createUser({ account: manager });
+      newManager.role = "manager";
+      newManager.status = "active";
 
-  isValidName = (name) => {
-    if (!name) return false;
-    return true;
-  };
+      newChapter.manager = newManager.id;
+      await newChapter.save();
+      await newManager.save();
 
-  isValidAffiliated = (affiliated) => {
-    if (!affiliated) return false;
-    return true;
-  };
+      const result = await Chapter.findOne({ _id: newChapter.id }).populate(
+        "manager"
+      );
 
-  isValidOffice = (office) => {
-    if (!office) return false;
-    return true;
-  };
-
-  isValidStatus = (status) => {
-    if (!STATUS.includes(status)) return false;
-    return true;
-  };
-
-  getChapterWithKey = async (key) => {
-    return await Chapter.findOne(key);
-  };
-
-  getAllChapters = async()=>{
-    return await Chapter.find()
-  }
-
-  // Kiểm tra hợp lệ Chapter
-  isValidChapter = async (input, isUpdating = false) => {
-    const { chapterCode, name, affiliated, office } = input;
-
-    if (!isUpdating || chapterCode) {
-      if (!this.isValidChapterCode(chapterCode))
-        return "Mã chi đoàn không hợp lệ";
-      const exist = await this.getChapterWithKey({ chapterCode });
-      if (!isUpdating && exist) return "Mã chi đoàn đã được sử dụng";
+      return result;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi tạo chi đoàn";
     }
+  };
 
-    if (!isUpdating || name) {
-      if (!this.isValidName(name)) return "Tên chi đoàn không hợp lệ";
+  getChapters = async () => {
+    try {
+      const chapters = await Chapter.find();
+      return chapters;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi lấy danh sách chi đoàn";
     }
+  };
 
-    if (!isUpdating || affiliated) {
-      if (!this.isValidAffiliated(affiliated))
-        return "Đoàn trực thuộc không hợp lệ";
+  getChapter = async (id) => {
+    try {
+      const chapter = await Chapter.findOne({ _id: id }).populate("manager");
+
+      const result = ResponseBuilder.success();
+      result.data = chapter;
+
+      return result;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi lấy thông tin chi đoàn";
     }
+  };
 
-    if (!isUpdating || office) {
-      if (!this.isValidOffice(office)) return "Văn phòng đoàn không hợp lệ";
+  updateChapter = async (id, input) => {
+    try {
+      let chapter = await Chapter.findOne({ _id: id });
+
+      Object.entries(input).forEach(([key, value]) => {
+        chapter[key] = value;
+      });
+
+      const updatedChapter = await chapter.save();
+      return updatedChapter;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi cập nhật chi đoàn";
     }
-
-    return true;
   };
 
-  createNewChapter = async (input) => {
-    // Kiểm tra hợp lệ
-    const valid = await this.isValidChapter(input);
-    if (valid !== true) return valid;
+  activeChapter = async (id) => {
+    try {
+      const chapter = await Chapter.findOne({ _id: id });
 
-    const { chapterCode, name, affiliated, office } = input;
+      chapter.status = "active";
+      const activeChapter = await chapter.save();
 
-    // Tạo Manager cho Chapter
-    const manager = await userService.createNewManager({
-      username: chapterCode,
-      password: chapterCode, // mật khẩu mặc định là chapterCode
-    });
-
-    if (typeof manager === "string") return manager; // trả về lỗi nếu tạo Manager không thành công
-
-    // Tạo Chapter mới
-    const chapter = new Chapter({
-      chapterCode,
-      name,
-      affiliated,
-      office,
-      status: "active",
-      managerId: manager._id, // gán managerId
-    });
-
-    const result = {};
-    result.manager = manager; // Manager đã được lưu trong createNewManager
-    result.chapter = await chapter.save(); // Lưu Chapter mới
-
-    return result;
+      return activeChapter;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi kích hoạt chi đoàn";
+    }
   };
 
-  // Cập nhật Chapter
-  updateChapter = async (key, input) => {
-    // Kiểm tra hợp lệ
-    const valid = await this.isValidChapter(input, true);
-    if (valid !== true) return valid;
+  lockChapter = async (id) => {
+    try {
+      const chapter = await Chapter.findOne({ _id: id });
 
-    const chapter = await this.getChapterWithKey(key);
-    if (!chapter) return "Chapter không tồn tại";
+      chapter.status = "locked";
+      const lockedChapter = await chapter.save();
 
-    const { name, affiliated, office } = input;
-
-    if (name) chapter.name = name;
-    if (affiliated) chapter.affiliated = affiliated;
-    if (office) chapter.office = office;
-
-    // Nếu muốn update Manager, có thể làm ở đây
-    const result = await chapter.save();
-    return result;
-  };
-
-  // Chapter
-  lockChapter = async (key) => {
-    const chapter = await this.getChapterWithKey(key);
-    if (!chapter) return "Chapter không tồn tại";
-
-    chapter.status = "locked";
-    return await chapter.save();
-  };
-
-  unlockChapter = async (key) => {
-    const chapter = await this.getChapterWithKey(key);
-    if (!chapter) return "Chapter không tồn tại";
-
-    chapter.status = "active";
-    return await chapter.save();
+      return lockedChapter;
+    } catch (error) {
+      console.log(error.message);
+      return "Lỗi khi khóa chi đoàn";
+    }
   };
 }
 
