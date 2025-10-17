@@ -1,6 +1,7 @@
 const validatorHelper = {
   checkDuplicatedKey: async (modelName, keyName, value) => {
     try {
+      if (value == null || value == '') return false;
       const isDuplicated = await modelName.findOne({ [keyName]: value });
       if (isDuplicated) return true;
       return false;
@@ -11,4 +12,4 @@ const validatorHelper = {
   },
 };
 
-export default validatorHelper
+export default validatorHelper;

@@ -42,11 +42,10 @@ class UserService {
       console.log(input);
 
       // 🔹 Nếu có thông tin hồ sơ thì tạo profile và liên kết
-      if (profile) {
-        const newProfile = new Profile(profile);
-        newAccount.profile = newProfile.id;
-        await newProfile.save();
-      }
+
+      const newProfile = profile ? new Profile(profile) : new Profile();
+      newAccount.profile = newProfile.id;
+      await newProfile.save();
 
       // 🔹 Lưu tài khoản
       await newAccount.save();
@@ -194,9 +193,9 @@ class UserService {
   updateAvatar = async (id, avatar) => {
     try {
       const account = await Account.findOne({ _id: id });
-      console.log(account)
+      console.log(account);
       const profile = await Profile.findOne({ _id: account?.profile });
-      console.log(profile)
+      console.log(profile);
       profile.avatar = avatar;
 
       await profile.save();

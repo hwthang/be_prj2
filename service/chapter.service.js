@@ -9,6 +9,7 @@ class ChapterService {
       const newChapter = new Chapter(chapter);
       newChapter.status = "active";
       const newManager = await userService.createUser({ account: manager });
+      if (typeof newManager == "string") return newManager;
       newManager.role = "manager";
       newManager.status = "active";
 
