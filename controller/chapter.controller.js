@@ -1,109 +1,97 @@
 import chapterService from "../service/chapter.service.js";
-import ResponseBuilder from "../utils/response.helper.js";
 
-class ChapterController {
-  // 🧩 Tạo chi đoàn
-  createChapter = async (req, res) => {
+class ChapterControler {
+  create = async (req, res) => {
     try {
-      const input = req.body;
-      const result = await chapterService.createChapter(input);
-
-      if (typeof result === "string") {
-        return ResponseBuilder.error(result).send(res);
+      if (req.file) {
+        req.body.avatar = req.file;
       }
 
-      return ResponseBuilder.success("Tạo chi đoàn thành công", result).send(res);
+      console.log(req.file);
+      const result = await chapterService.create(req.body);
+      console.log(`${typeof result}`)
+      return res.status(200).json(result);
     } catch (error) {
-      console.log(error);
-      ResponseBuilder.error("Lỗi khi tạo chi đoàn", null, 500).send(res);
+      console.log(error.message);
+      res.status(500).json("Lỗi server");
     }
   };
 
-  // 🧩 Lấy danh sách chi đoàn
-  getChapters = async (req, res) => {
+  getAll = async (req, res) => {
     try {
-      const result = await chapterService.getChapters();
-
-      if (typeof result === "string") {
-        return ResponseBuilder.error(result).send(res);
+      const result = await chapterService.getAll();
+      if (typeof result == "string") {
+        res.status(200).json({ message: result });
+        return;
       }
-
-      return ResponseBuilder.success("Lấy danh sách chi đoàn thành công", result).send(res);
+      res.status(200).json(result);
     } catch (error) {
-      console.log(error);
-      ResponseBuilder.error("Lỗi khi lấy danh sách chi đoàn", null, 500).send(res);
+      console.log(error.message);
+      res.status(500).json({ message: "Lỗi khi lấy danh sách chi đoàn" });
     }
   };
 
-  // 🧩 Lấy thông tin chi đoàn
-  getChapter = async (req, res) => {
+  getById = async (req, res) => {
     try {
-      const id = req.params.id;
-      const result = await chapterService.getChapter(id);
-
-      if (typeof result === "string") {
-        return ResponseBuilder.error(result).send(res);
+      const result = await chapterService.getById(req.params.id);
+      if (typeof result == "string") {
+        res.status(200).json({ message: result });
+        return;
       }
-
-      return ResponseBuilder.success("Lấy thông tin chi đoàn thành công", result).send(res);
+      res.status(200).json(result);
     } catch (error) {
-      console.log(error);
-      ResponseBuilder.error("Lỗi khi lấy thông tin chi đoàn", null, 500).send(res);
+      console.log(error.message);
+      res.status(500).json({ message: "Lỗi khi lấy thông tin chi đoàn" });
     }
   };
 
-  // 🧩 Cập nhật chi đoàn
-  updateChapter = async (req, res) => {
+  update = async (req, res) => {
     try {
-      const id = req.params.id;
-      const input = req.body;
-      console.log(id)
-      const result = await chapterService.updateChapter(id, input);
-
-      if (typeof result === "string") {
-        return ResponseBuilder.error(result).send(res);
+      if (req.file) {
+        req.body.avatar = req.file;
       }
 
-      return ResponseBuilder.success("Cập nhật chi đoàn thành công", result).send(res);
+      const result = await chapterService.update(req.params.id, req.body);
+
+      if (typeof result == "string") {
+        res.status(200).json({ message: result });
+        return;
+      }
+      res.status(201).json(result);
     } catch (error) {
-      console.log(error);
-      ResponseBuilder.error("Lỗi khi cập nhật chi đoàn", null, 500).send(res);
+      console.log(error.message);
+      res.status(500).json({ message: "Lỗi khi cập nhật chi đoàn" });
     }
   };
 
-  // 🧩 Kích hoạt chi đoàn
-  activeChapter = async (req, res) => {
+  activate = async (req, res) => {
     try {
-      const id = req.params.id;
-      const result = await chapterService.activeChapter(id);
+      const result = await chapterService.activate(req.params.id);
 
-      if (typeof result === "string") {
-        return ResponseBuilder.error(result).send(res);
+      if (typeof result == "string") {
+        res.status(200).json({ message: result });
+        return;
       }
-
-      return ResponseBuilder.success("Kích hoạt chi đoàn thành công", result).send(res);
+      res.status(200).json(result);
     } catch (error) {
-      console.log(error);
-      ResponseBuilder.error("Lỗi khi kích hoạt chi đoàn", null, 500).send(res);
+      console.log(error.message);
+      res.status(500).json({ message: "Lỗi khi kích hoạt chi đoàn" });
     }
   };
-
-  // 🧩 Khóa chi đoàn
-  lockChapter = async (req, res) => {
+  lock = async (req, res) => {
     try {
-      const id = req.params.id;
-      const result = await chapterService.lockChapter(id);
+      const result = await chapterService.lock(req.params.id);
 
-      if (typeof result === "string") {
-        return ResponseBuilder.error(result).send(res);
+      if (typeof result == "string") {
+        res.status(200).json({ message: result });
+        return;
       }
-
-      return ResponseBuilder.success("Khóa chi đoàn thành công", result).send(res);
+      res.status(200).json(result);
     } catch (error) {
-      console.log(error);
-      ResponseBuilder.error("Lỗi khi khóa chi đoàn", null, 500).send(res);
+      console.log(error.message);
+      res.status(500).json({ message: "Lỗi khi khóa chi đoàn" });
     }
   };
 }
 
-export default new ChapterController();
+export default new ChapterControler();

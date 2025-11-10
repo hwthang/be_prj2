@@ -1,98 +1,191 @@
+import { populate } from "dotenv";
+import Account from "../model/account.model.js";
 import Chapter from "../model/chapter.model.js";
-import ResponseBuilder from "../utils/response.helper.js";
-import userService from "./user.service.js";
+import bcryptHelper from "../utils/bcrypt.helper.js";
+import validatorHelper from "../utils/validator.helper.js";
+import cloudinary from "../config/cloudinary.js";
 
 class ChapterService {
-  createChapter = async (input) => {
+  create = async (input) => {
     try {
-      const { chapter, manager } = input;
-      const newChapter = new Chapter(chapter);
-      newChapter.status = "active";
-      const newManager = await userService.createUser({ account: manager });
-      if (typeof newManager == "string") return newManager;
-      newManager.role = "manager";
-      newManager.status = "active";
+      const {
+        username,
+        email,
+        phoneNumber,
+        password,
+        name,
+        establishedAt,
+        affiliated,
+        address,
+        avatar,
+      } = input;
 
-      newChapter.manager = newManager.id;
-      await newChapter.save();
-      await newManager.save();
-
-      const result = await Chapter.findOne({ _id: newChapter.id }).populate(
-        "manager"
+      const hasDuplicatedAccount = await validatorHelper.checkIsDuplicated(
+        Account,
+        [
+          { key: "username", value: username },
+          { key: "email", value: email },
+          { key: "phoneNumber", value: phoneNumber },
+        ]
       );
 
-      return result;
-    } catch (error) {
-      console.log(error.message);
-      return "Lỗi khi tạo chi đoàn";
-    }
-  };
+      if (hasDuplicatedAccount)
+        return "Tên đăng nhập, email hoặc số điện thoại đã được đăng ký";
+      const account = new Account({
+        username,
+        email,
+        phoneNumber,
+        password: await bcryptHelper.hashPassword(password),
+        type: "chapter",
+        status: "active",
+      });
+      if (avatar?.path) {
+        account.avatar = {
+          path: avatar.path,
+          publicId: avatar.filename,
+        };
+      }
 
-  getChapters = async () => {
-    try {
-      const chapters = await Chapter.find();
-      return chapters;
-    } catch (error) {
-      console.log(error.message);
-      return "Lỗi khi lấy danh sách chi đoàn";
-    }
-  };
-
-  getChapter = async (id) => {
-    try {
-      const chapter = await Chapter.findOne({ _id: id }).populate("manager");
-
-      const result = ResponseBuilder.success();
-      result.data = chapter;
-
-      return result;
-    } catch (error) {
-      console.log(error.message);
-      return "Lỗi khi lấy thông tin chi đoàn";
-    }
-  };
-
-  updateChapter = async (id, input) => {
-    try {
-      let chapter = await Chapter.findOne({ _id: id });
-
-      Object.entries(input).forEach(([key, value]) => {
-        chapter[key] = value;
+      const chapter = new Chapter({
+        name,
+        establishedAt,
+        affiliated,
+        address,
+        accountId: account.id,
       });
 
-      const updatedChapter = await chapter.save();
-      return updatedChapter;
+      await account.save();
+      await chapter.save();
+
+      return await Chapter.findById(chapter.id).populate("accountId");
     } catch (error) {
-      console.log(error.message);
-      return "Lỗi khi cập nhật chi đoàn";
+      console.log(error);
+      return "Có lỗi xảy ra khi tạo chi đoàn";
     }
   };
 
-  activeChapter = async (id) => {
+  getAll = async () => {
     try {
-      const chapter = await Chapter.findOne({ _id: id });
-
-      chapter.status = "active";
-      const activeChapter = await chapter.save();
-
-      return activeChapter;
+      return await Chapter.find().populate("accountId");
     } catch (error) {
-      console.log(error.message);
-      return "Lỗi khi kích hoạt chi đoàn";
+      return "Có lỗi xảy ra khi lấy danh sách chi đoàn";
     }
   };
 
-  lockChapter = async (id) => {
+  getById = async (id) => {
     try {
-      const chapter = await Chapter.findOne({ _id: id });
-
-      chapter.status = "locked";
-      const lockedChapter = await chapter.save();
-
-      return lockedChapter;
+      return await Chapter.findById(id).populate("accountId");
     } catch (error) {
-      console.log(error.message);
-      return "Lỗi khi khóa chi đoàn";
+      return "Có lỗi xảy ra khi lấy thông tin chi đoàn";
+    }
+  };
+
+  update = async (id, input) => {
+    try {
+      const currentChapter = await Chapter.findById(id).populate("accountId");
+      if (!currentChapter) return "Chi đoàn không tồn tại";
+
+      const {
+        username,
+        email,
+        phoneNumber,
+        password,
+        name,
+        establishedAt,
+        affiliated,
+        address,
+        status,
+        avatar, // 👈 từ req.file gán ở controller
+      } = input;
+
+      console.log("📩 input update:", input);
+
+      let avatarData = currentChapter.accountId.avatar;
+
+      // ✅ Có avatar mới → xử lý upload
+      if (avatar.path) {
+        // ✅ Xoá ảnh cũ nếu có
+        if (avatarData?.publicId) {
+          await cloudinary.uploader.destroy(avatarData.publicId);
+        }
+
+        avatarData = {
+          path: avatar.path,
+          publicId: avatar.filename,
+        };
+      }
+
+      // ✅ Validate trùng account
+      const hasDuplicatedAccount = await validatorHelper.checkIsDuplicated(
+        Account,
+        [
+          { key: "username", value: username },
+          { key: "email", value: email },
+          { key: "phoneNumber", value: phoneNumber },
+        ],
+        currentChapter.accountId
+      );
+
+      if (hasDuplicatedAccount)
+        return "Tên đăng nhập, email hoặc số điện thoại đã được đăng ký";
+
+      // ✅ Update tài khoản
+      await Account.findByIdAndUpdate(currentChapter.accountId, {
+        username,
+        email,
+        password,
+        phoneNumber,
+        status, // 👈 thêm hỗ trợ khóa / kích hoạt
+        avatar: avatarData, // ✅ cập nhật avatar mới
+      });
+
+      // ✅ Update chapter
+      await Chapter.findByIdAndUpdate(id, {
+        name,
+        affiliated,
+        address,
+        establishedAt,
+      });
+
+      // ✅ Trả kết quả cập nhật mới nhất
+      return await Chapter.findById(id).populate("accountId");
+    } catch (error) {
+      console.log(error);
+      return "Có lỗi xảy ra khi cập nhật chi đoàn";
+    }
+  };
+
+  activate = async (id) => {
+    try {
+      const currentChapter = await Chapter.findById(id).populate("accountId");
+      if (!currentChapter) return "Chi đoàn không tồn tại";
+      // ✅ Update tài khoản
+      await Account.findByIdAndUpdate(currentChapter.accountId, {
+        status: "active",
+      });
+
+      // ✅ Trả kết quả cập nhật mới nhất
+      return await Chapter.findById(id).populate("accountId");
+    } catch (error) {
+      console.log(error);
+      return "Có lỗi xảy ra khi kích hoạt chi đoàn";
+    }
+  };
+
+  lock = async (id) => {
+    try {
+      const currentChapter = await Chapter.findById(id).populate("accountId");
+      if (!currentChapter) return "Chi đoàn không tồn tại";
+      // ✅ Update tài khoản
+      await Account.findByIdAndUpdate(currentChapter.accountId, {
+        status: "locked",
+      });
+
+      // ✅ Trả kết quả cập nhật mới nhất
+      return await Chapter.findById(id).populate("accountId");
+    } catch (error) {
+      console.log(error);
+      return "Có lỗi xảy ra khi khóa chi đoàn";
     }
   };
 }

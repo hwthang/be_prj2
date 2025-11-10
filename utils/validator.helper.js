@@ -1,14 +1,17 @@
 const validatorHelper = {
-  checkDuplicatedKey: async (modelName, keyName, value) => {
-    try {
-      if (value == null || value == '') return false;
-      const isDuplicated = await modelName.findOne({ [keyName]: value });
-      if (isDuplicated) return true;
-      return false;
-    } catch (error) {
-      console.log(error);
-      return false;
+  checkIsDuplicated: async (Model, fields, excludeId = null) => {
+    if (!fields || fields.length === 0) return false;
+
+    // Tạo mảng $or query
+    const orConditions = fields.map((f) => ({ [f.key]: f.value }));
+
+    const query = { $or: orConditions };
+    if (excludeId) {
+      query._id = { $ne: excludeId }; // bỏ qua document có id này
     }
+
+    const count = await Model.countDocuments(query).exec();
+    return count > 0;
   },
 };
 

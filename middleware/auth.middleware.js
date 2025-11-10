@@ -1,4 +1,4 @@
-import userService from "../service/user.service.js";
+// import userService from "../service/user.service.js";
 import jwtHelper from "../utils/jwt.helper.js";
 
 export const verifyToken = async (req, res, next) => {

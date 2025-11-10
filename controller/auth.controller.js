@@ -1,6 +1,5 @@
 import accountService from "../service/user.service.js";
 import authService from "../service/auth.service.js";
-import chapterService from "../service/chapter.service.js";
 import ResponseBuilder from "../utils/response.helper.js";
 
 class AuthController {

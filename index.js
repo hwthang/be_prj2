@@ -3,8 +3,6 @@ import mongoose from "mongoose";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import cors from "cors";
-import UserRoute from "./route/user.route.js";
-import AuthRoute from "./route/auth.route.js";
 import ChapterRoute from "./route/chapter.route.js";
 
 dotenv.config();
@@ -22,12 +20,16 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(async () => {
+    console.log("✅ MongoDB connected");
+  })
   .catch((err) => console.error("❌ MongoDB error:", err));
 
-app.use("/api/auth", AuthRoute);
-app.use("/api/users", UserRoute);
-app.use("/api/chapters", ChapterRoute);
+  app.get('/', (req,res)=>{
+    res.status(200).json({message:"Welcome to BE_PRJ2"})
+  })
+
+  app.use('/api/chapters', ChapterRoute)
 
 // Chạy server
 const PORT = process.env.PORT || 5000;
