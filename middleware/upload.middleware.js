@@ -1,12 +1,12 @@
+import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../config/cloudinary.js";
-import multer from "multer";
-
 
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
-    folder: req.query.folder || "uploads/default",
+    folder: "cds",
+    resource_type: "auto", // xử lý image + video
     format: file.mimetype.split("/")[1],
     public_id: file.originalname.split(".")[0],
   }),
