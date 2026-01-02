@@ -1,5 +1,6 @@
 import Account from "../../account/model/account.model.js";
 import accountService from "../../account/service/account.service.js";
+import conversationService from "../../conversation/service/conversation.service.js";
 import Chapter from "../model/chapter.model.js";
 
 class ChapterService {
@@ -21,42 +22,55 @@ class ChapterService {
     return false;
   };
 
-  createNewChapter = async (
-    data = {
-      username: "",
-      password: "",
-      email: "",
-      phoneNumber: "",
-      name: "",
-      affliated: "",
-      establishedAt: "",
-      address: "",
-    }
-  ) => {
-    try {
-      const isAccountExisted = await accountService.checkIsAccountExisted(data);
-      if (typeof isAccountExisted == "string") return isAccountExisted;
+createNewChapter = async (
+  data = {
+    username: "",
+    password: "",
+    email: "",
+    phoneNumber: "",
+    name: "",
+    affliated: "",
+    establishedAt: "",
+    address: "",
+  }
+) => {
+  try {
+    const isAccountExisted = await accountService.checkIsAccountExisted(data);
+    if (typeof isAccountExisted === "string") return isAccountExisted;
 
-      const isChapterExisted = await this.checkIsChapterExisted(data);
-      if (typeof isChapterExisted == "string") return isChapterExisted;
+    const isChapterExisted = await this.checkIsChapterExisted(data);
+    if (typeof isChapterExisted === "string") return isChapterExisted;
 
-      const newAccount = new Account({
-        ...data,
-        displayName: data.name,
-        type: "chapter",
-      });
-      const newChapter = new Chapter({ ...data, accountId: newAccount.id });
+    // 1️⃣ Tạo account chapter
+    const newAccount = new Account({
+      ...data,
+      displayName: data.name,
+      type: "chapter",
+    });
 
-      await newChapter.save();
-      await newAccount.save();
+    await newAccount.save();
 
-      return await newChapter.populate("accountId");
-    } catch (error) {
-      console.log(error);
-      return "Lỗi khi tạo chi đoàn";
-    }
-  };
+    // 2️⃣ Tạo chapter
+    const newChapter = new Chapter({
+      ...data,
+      accountId: newAccount._id,
+    });
 
+    await newChapter.save();
+
+    // 3️⃣ TẠO GROUP CHAT CHO CHAPTER
+    await conversationService.createConversation({
+      name: `Nhóm chat ${data.name}`,
+      members: [newAccount._id],
+      chapterId: newChapter._id, // 👈 rất quan trọng
+    });
+
+    return await newChapter.populate("accountId");
+  } catch (error) {
+    console.log(error);
+    return "Lỗi khi tạo chi đoàn";
+  }
+};
   getAllChapters = async () => {
     try {
       const chapters = await Chapter.find().populate("accountId");

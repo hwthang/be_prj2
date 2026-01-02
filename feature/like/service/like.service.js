@@ -26,10 +26,16 @@ class LikeService {
   ) => {
     await Post.findByIdAndUpdate(
       data.postId,
-      { $dec: { likes: -1 } },
+      { $inc: { likes: -1 } },
       { new: true }
     );
     return await Like.findOneAndDelete({ ...data });
+  };
+
+  getLikedEvent = async (accountId) => {
+    const res = await Like.find({ accountId }).select("postId -_id").lean();
+
+    return res.map((item) => item.postId);
   };
 }
 

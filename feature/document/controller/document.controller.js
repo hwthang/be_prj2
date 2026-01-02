@@ -5,7 +5,7 @@ class DocumentController {
   // Tạo tài liệu
   createNewDoc = async (req, res) => {
     try {
-      const data = { ...req.body, file: req.file };
+      const data = { ...req.body };
 
       const result = await documentService.createNewDoc(data);
       if (typeof result === "string")
@@ -67,7 +67,7 @@ class DocumentController {
   updateDocumentById = async (req, res) => {
     try {
       const { id } = req.params;
-      const data = { ...req.body, file: req.file };
+      const data = { ...req.body};
 
       const result = await documentService.updateDocumentById(id, data);
       if (typeof result === "string")

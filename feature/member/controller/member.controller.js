@@ -80,6 +80,16 @@ class MemberController {
       return res.json(buildResponse("Lỗi khi cập nhật đoàn viên", false));
     }
   };
+
+  getLeaderBoard = async (req, res) => {
+    const { chapterId } = req.query;
+    const result = await memberService.getLeaderBoard(chapterId);
+    return res.json(
+      buildResponse("Lấy bxh", true, {
+        leaderboard: result,
+      })
+    );
+  };
 }
 
 export default new MemberController();

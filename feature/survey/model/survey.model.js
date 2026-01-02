@@ -11,10 +11,6 @@ const surveySchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    scope: {
-      type: String,
-      default: null,
-    },
     startedAt: {
       type: Date,
       default: null,

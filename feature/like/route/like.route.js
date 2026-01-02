@@ -6,4 +6,6 @@ const LikeRoute = Router();
 LikeRoute.post("/", likeController.createLike);
 LikeRoute.delete("/", likeController.deleteLike);
 
+LikeRoute.get("/:accountId", likeController.getLikeEvent);
+
 export default LikeRoute;

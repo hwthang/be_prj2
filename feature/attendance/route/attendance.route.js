@@ -1,9 +1,21 @@
 import { Router } from "express";
 import attendanceController from "../controller/attendance.controller.js";
 
-const AttendanceRoute = Router()
+const AttendanceRoute = Router();
 
-AttendanceRoute.post("/", attendanceController.createNewAttendance)
-AttendanceRoute.patch("/check-in", attendanceController.checkIn)
+AttendanceRoute.post("/", attendanceController.createNewAttendance);
+AttendanceRoute.patch("/check-in", attendanceController.checkIn);
 
-export default AttendanceRoute
+// Member
+AttendanceRoute.get(
+  "/members/:memberId",
+  attendanceController.getMemberAttendanceByMemberId
+);
+
+// Event
+AttendanceRoute.get(
+  "/events/:eventId",
+  attendanceController.getAttendanceByEventId
+);
+
+export default AttendanceRoute;

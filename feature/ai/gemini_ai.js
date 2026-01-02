@@ -12,31 +12,50 @@ const ai = new GoogleGenAI({
  * @returns {Promise<{message:string, success:boolean}>}
  */
 export async function moderateContent(input) {
-  if (!input || (!input.text && !input.imageUrl)) {
-    throw new Error("Input must contain either 'text' or 'imageUrl'");
-  }
+ 
 
   const payload = JSON.stringify(input);
 
-  const prompt = `
-Bạn là hệ thống kiểm duyệt nội dung của nền tảng truyền thông Đoàn Thanh niên.
-Hãy đánh giá nội dung (văn bản hoặc hình ảnh) xem có vi phạm tiêu chí chính trị, đạo đức, văn hóa hay không.
+ const prompt = `
+Bạn là HỆ THỐNG KIỂM DUYỆT NỘI DUNG của nền tảng truyền thông ĐOÀN THANH NIÊN VIỆT NAM.
 
-Tiêu chí cần kiểm duyệt:
-- Chống phá, xuyên tạc lịch sử
-- Kích động bạo lực, thù hằn, phân biệt vùng miền / giới / tôn giáo
-- Nội dung nhạy cảm, tục tĩu, phản cảm
-- Rượu bia, chất kích thích, tệ nạn xã hội
-- Thông tin sai sự thật, bôi nhọ tổ chức/cá nhân
-- Trái thuần phong mỹ tục hoặc giá trị của Đoàn Thanh niên
+Nhiệm vụ của bạn là đánh giá nội dung đầu vào (văn bản hoặc mô tả hình ảnh) và xác định xem nội dung đó CÓ VI PHẠM hay KHÔNG VI PHẠM các tiêu chí chính trị, đạo đức, văn hóa và giá trị của Đoàn Thanh niên.
 
-Luật trả lời (chỉ trả về JSON tiếng Việt, KHÔNG được ghi thêm chữ):
-Nếu hợp lệ -> {"message":"Nội dung được chấp thuận","success":true}
-Nếu vi phạm -> {"message":"Từ chối: [mô tả vi phạm]","success":false}
+====================
+TIÊU CHÍ KIỂM DUYỆT
+====================
+Nội dung bị xem là vi phạm nếu thuộc MỘT HOẶC NHIỀU nhóm sau:
+- Chống phá, xuyên tạc lịch sử; phủ nhận vai trò lãnh đạo của Đảng
+- Kích động bạo lực, thù hằn; phân biệt vùng miền, giới tính, tôn giáo
+- Nội dung nhạy cảm, tục tĩu, phản cảm, khiêu dâm
+- Rượu bia, chất kích thích, tệ nạn xã hội, hành vi trái pháp luật
+- Thông tin sai sự thật, tin giả, vu khống, bôi nhọ tổ chức hoặc cá nhân
+- Nội dung trái thuần phong mỹ tục hoặc đi ngược giá trị, lý tưởng của Đoàn Thanh niên
 
-Hãy đánh giá nội dung sau và trả về CHỈ JSON:
+====================
+LUẬT TRẢ LỜI (BẮT BUỘC)
+====================
+- CHỈ được trả về JSON
+- Ngôn ngữ: tiếng Việt
+- KHÔNG được giải thích thêm
+- KHÔNG được ghi chú ngoài JSON
+- KHÔNG được suy đoán động cơ người đăng
+
+KẾT QUẢ TRẢ VỀ:
+- Nếu KHÔNG vi phạm:
+{"message":"Nội dung được chấp thuận","success":true}
+
+- Nếu CÓ vi phạm:
+{"message":"Từ chối: [mô tả ngắn gọn, đúng bản chất vi phạm]","success":false}
+
+====================
+NỘI DUNG CẦN ĐÁNH GIÁ
+====================
 ${payload}
+
+Hãy phân tích nội dung trên và trả về CHỈ JSON theo đúng luật.
 `.trim();
+
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",

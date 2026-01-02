@@ -68,11 +68,15 @@ class EventService {
       const isEventExisted = await this.checkIsEventExisted(data);
       if (isEventExisted) return isEventExisted;
 
+      const newPost = new Post({
+        type: "EVENT",
+      });
       const newEvent = new Event({
         ...data,
         status: this.getStatus(data),
+        postId: newPost._id,
       });
-
+      await newPost.save();
       await newEvent.save();
 
       return await this.getEventById(newEvent.id);
@@ -131,13 +135,9 @@ class EventService {
     }
   };
 
-  updateEventById = async (
-    id,
-    data
-  ) => {
+  updateEventById = async (id, data) => {
     try {
       const currentEvent = await Event.findById(id);
-
 
       const isEventExisted = await this.checkIsEventExisted(
         { ...data, chapterId: currentEvent.chapterId },
@@ -160,8 +160,10 @@ class EventService {
 
   updateImagesOfEventById = async (id, images) => {
     try {
-      const event = await Event.findById(id)
-      return await Event.findByIdAndUpdate(id, { images: [...event.images,...images] });
+      const event = await Event.findById(id);
+      return await Event.findByIdAndUpdate(id, {
+        images: [...event.images, ...images],
+      });
     } catch (error) {
       console.log(error);
       return "Lỗi khi cập nhật hình ảnh sự kiện";

@@ -1,10 +1,11 @@
 import Chapter from "../../chapter/model/chapter.model.js";
+import Comment from "../../comment/model/comment.model.js";
 import Document from "../../document/model/document.model.js";
 import Event from "../../event/model/event.model.js";
+import Like from "../../like/model/like.model.js";
 import Member from "../../member/model/member.model.js";
-import Comment from "../model/comment.model.js";
-import Like from "../model/like.model.js";
 import Post from "../model/post.model.js";
+
 
 class PostService {
   createNewPost = async (input) => {

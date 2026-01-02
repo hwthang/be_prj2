@@ -1,3 +1,4 @@
+import Post from "../../post/model/post.model.js";
 import Document from "../model/document.model.js";
 
 class DocumentService {
@@ -38,9 +39,13 @@ class DocumentService {
       const isDocumentExisted = await this.checkIsDocumentDuplicated(data);
       if (isDocumentExisted) return isDocumentExisted;
 
+      const newPost = new Post({ type: "DOC" });
       const newDocument = new Document({
         ...data,
+        postId: newPost._id,
       });
+
+      await newPost.save();
 
       await newDocument.save();
       return this.getDocumentById(newDocument.id);

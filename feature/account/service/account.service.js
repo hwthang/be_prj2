@@ -1,4 +1,6 @@
 import jwtHelper from "../../../utils/jwt.helper.js";
+import Chapter from "../../chapter/model/chapter.model.js";
+import Member from "../../member/model/member.model.js";
 import Account from "../model/account.model.js";
 
 class AccountService {
@@ -74,11 +76,19 @@ class AccountService {
           { phoneNumber: data.account },
         ],
         password: data.password,
-      });
+      }).lean();
 
       if (!account) return "Sai mật khẩu";
 
-      return account; // hoặc JWT token tùy bạn
+      if (account.type == "chapter") {
+        const chapter = await Chapter.findOne({ accountId: account._id }).lean();
+        return { ...account, chapter };
+      } else {
+        const member = await Member.findOne({ accountId: account._id }).lean();
+        return { ...account, member };
+      } // hoặc JWT token tùy bạn
+
+      return account;
       // return jwtHelper.signToken(account);
     } catch (error) {
       console.log(error);

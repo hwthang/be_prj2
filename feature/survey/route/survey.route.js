@@ -9,4 +9,16 @@ SurveyRoute.get("", surveyController.getAllSurveys);
 
 SurveyRoute.get("/:id", surveyController.getSurveyById);
 
+
+SurveyRoute.put("/:id", surveyController.updateSurveyById);
+SurveyRoute.delete("/:id", surveyController.deleteSurveyById);
+SurveyRoute.get(
+  "/:id/results",
+  surveyController.getSurveyResultById
+);
+SurveyRoute.get(
+  "/member/:memberId",
+  surveyController.getSurveysDoneByMember
+);
+
 export default SurveyRoute;
