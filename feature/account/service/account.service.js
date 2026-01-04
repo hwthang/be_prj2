@@ -142,7 +142,7 @@ class AccountService {
     try {
       const updatedAccount = await Account.findByIdAndUpdate(
         id,
-        { avatar: avatar },
+        { avatar},
         { new: true }
       );
       return updatedAccount;

@@ -10,13 +10,14 @@ AccountRoute.post("/login", accountController.login);
 
 AccountRoute.patch("/:id/activate", accountController.activate);
 
+AccountRoute.get("/:accountId", accountController.getAccountById);
+
 AccountRoute.patch("/:id/inactivate", accountController.inactivate);
 
 AccountRoute.patch("/:id/recover-password", accountController.recoverPassword);
 
 AccountRoute.patch(
   "/:id/change-avatar",
-  upload.single("avatar"),
   accountController.changeAvatar
 );
 

@@ -22,7 +22,7 @@ class EvaluationService {
         populate: [{ path: "chapterId" }, { path: "accountId" }],
       });
     } catch (error) {
-      console.log(error);
+      // console.log(error);
       return "Lỗi khi tạo đánh giá";
     }
   };

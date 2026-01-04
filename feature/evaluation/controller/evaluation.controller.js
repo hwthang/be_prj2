@@ -9,10 +9,10 @@ class EvaluationController {
         type: req.body?.type,
         title: req.body?.title,
         description: req.body?.description,
-        attachments: req?.files,
+        attachments: req?.body?.attachments,
       };
 
-      console.log(req)
+      // console.log(data)
 
       const result = await evaluationService.createNewEvaluation(data);
 
@@ -25,7 +25,7 @@ class EvaluationController {
         })
       );
     } catch (error) {
-      console.log(error);
+      // console.log(error.message);
       return res.json(buildResponse("Lỗi khi tạo đánh giá đoàn viên", false));
     }
   };

@@ -1,4 +1,5 @@
 import { buildResponse } from "../../../utils/response.helper.js";
+import Account from "../model/account.model.js";
 import accountService from "../service/account.service.js";
 
 class AccountController {
@@ -104,7 +105,7 @@ class AccountController {
   changeAvatar = async (req, res) => {
     try {
       const { id } = req.params;
-      const avatar = req?.file || {};
+      const { avatar } = req?.body || {};
 
       const result = await accountService.changeAvatar(id, avatar);
 
@@ -120,6 +121,14 @@ class AccountController {
       console.log(error);
       return res.json(buildResponse("Lỗi khi thay đổi avatar", false));
     }
+  };
+
+  getAccountById = async (req, res) => {
+    const { accountId } = req.params;
+    const data = await Account.findById(accountId)
+      .select("avatar displayName")
+      .lean();
+    res.json(data);
   };
 }
 

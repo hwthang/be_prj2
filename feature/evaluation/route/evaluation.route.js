@@ -6,7 +6,7 @@ const EvaluationRoute = Router();
 
 EvaluationRoute.post(
   "/",
-  upload.array("attachments"),
+  // upload.array("attachments"),
   evaluationController.createNewEvaluation
 );
 EvaluationRoute.get("/", evaluationController.getAllEvaluationsOfMember);

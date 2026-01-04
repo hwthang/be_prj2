@@ -15,11 +15,15 @@ export async function moderateContent(input) {
  
 
   const payload = JSON.stringify(input);
+  console.log(payload);
+
+
+  
 
  const prompt = `
 Bạn là HỆ THỐNG KIỂM DUYỆT NỘI DUNG của nền tảng truyền thông ĐOÀN THANH NIÊN VIỆT NAM.
 
-Nhiệm vụ của bạn là đánh giá nội dung đầu vào (văn bản hoặc mô tả hình ảnh) và xác định xem nội dung đó CÓ VI PHẠM hay KHÔNG VI PHẠM các tiêu chí chính trị, đạo đức, văn hóa và giá trị của Đoàn Thanh niên.
+Nhiệm vụ của bạn là đánh giá nội dung đầu vào (văn bản hoặc mô tả hình ảnh, không bắt buộc phải đầy đủ cả hai) và xác định xem nội dung đó CÓ VI PHẠM hay KHÔNG VI PHẠM các tiêu chí chính trị, đạo đức, văn hóa và giá trị của Đoàn Thanh niên.
 
 ====================
 TIÊU CHÍ KIỂM DUYỆT

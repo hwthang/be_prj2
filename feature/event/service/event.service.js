@@ -89,7 +89,12 @@ class EventService {
   getAllEvents = async () => {
     try {
       const events = await Event.find()
-        .populate("chapterId")
+       .populate({
+          path: "chapterId",
+          populate: {
+            path: "accountId",
+          },
+        })
         .populate("postId");
 
       const updatedEvents = await Promise.all(
@@ -106,7 +111,12 @@ class EventService {
   getAllEventsOfChapter = async (chapterId) => {
     try {
       const events = await Event.find({ chapterId })
-        .populate("chapterId")
+        .populate({
+          path: "chapterId",
+          populate: {
+            path: "accountId",
+          },
+        })
         .populate("postId");
 
       const updatedEvents = await Promise.all(
@@ -123,7 +133,12 @@ class EventService {
   getEventById = async (id) => {
     try {
       const event = await Event.findById(id)
-        .populate("chapterId")
+        .populate({
+          path: "chapterId",
+          populate: {
+            path: "accountId",
+          },
+        })
         .populate("postId");
 
       if (!event) return null;
@@ -172,11 +187,7 @@ class EventService {
 
   cancelEventById = async (id) => {
     try {
-      const event = await Event.findByIdAndUpdate(
-        id,
-        { status: "canceled" },
-        { new: true }
-      );
+      const event = await Event.findByIdAndDelete(id);
 
       return event;
     } catch (error) {

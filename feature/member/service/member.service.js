@@ -27,79 +27,147 @@ class MemberService {
     return false;
   };
 
-  createNewMember = async (
-    data = {
-      username: "",
-      password: "",
-      email: "",
-      phoneNumber: "",
-      chapterId: "",
-      fullName: "",
-      gender: "",
-      dateOfBirth: "",
-      hometown: "",
-      address: "",
-      ethnicity: "",
-      religion: "",
-      education: "",
-      qualification: "",
-      politicalTheory: "",
-      memberCode: "",
-      joinedAt: "",
-      position: "",
-    }
-  ) => {
-    try {
-      const isAccountExisted = await accountService.checkIsAccountExisted(data);
-      if (typeof isAccountExisted === "string") return isAccountExisted;
+createNewMember = async (
+  data = {
+    username: "",
+    password: "",
+    email: "",
+    phoneNumber: "",
+    chapterId: "",
+    fullName: "",
+    gender: "",
+    dateOfBirth: "",
+    hometown: "",
+    address: "",
+    ethnicity: "",
+    religion: "",
+    education: "",
+    qualification: "",
+    politicalTheory: "",
+    memberCode: "",
+    joinedAt: "",
+    position: "",
+  }
+) => {
+  try {
+    // 🔍 KIỂM TRA THÔNG TIN BẮT BUỘC
+    const requiredFields = [
+      { field: "username", name: "Tên đăng nhập" },
+      { field: "password", name: "Mật khẩu" },
+      { field: "email", name: "Email" },
+      { field: "phoneNumber", name: "Số điện thoại" },
+      { field: "chapterId", name: "Chi đoàn" },
+      { field: "fullName", name: "Họ và tên" },
+      { field: "gender", name: "Giới tính" },
+      { field: "dateOfBirth", name: "Ngày sinh" },
+      { field: "hometown", name: "Quê quán" },
+      { field: "address", name: "Địa chỉ" },
+      { field: "ethnicity", name: "Dân tộc" },
+      { field: "religion", name: "Tôn giáo" },
+      { field: "memberCode", name: "Mã đoàn viên" },
+      { field: "joinedAt", name: "Ngày vào đoàn" },
+    ];
 
-      const isMemberExisted = await this.checkIsMemberExisted(data);
-      if (typeof isMemberExisted === "string") return isMemberExisted;
-
-      // 1️⃣ Tạo account member
-      const newAccount = new Account({
-        ...data,
-        displayName: data.fullName,
-        type: "member",
-      });
-
-      await newAccount.save();
-
-      // 2️⃣ Tạo member
-      const newMember = new Member({
-        ...data,
-        accountId: newAccount._id,
-      });
-
-      await newMember.save();
-
-      // 3️⃣ LẤY CHAPTER
-      const chapter = await Chapter.findById(data.chapterId)
-        .select("name accountId")
-        .lean();
-
-      if (!chapter) {
-        throw new Error("Chapter not found");
+    const missingFields = [];
+    for (const { field, name } of requiredFields) {
+      if (!data[field] || data[field].toString().trim() === "") {
+        missingFields.push(name);
       }
-
-      // 4️⃣ TÌM GROUP CHAT CỦA CHAPTER
-      const conversation = await Conversation.findOne({
-        name: `Nhóm chat ${chapter.name}`,
-        members: { $in: [chapter.accountId] }, // 👈 đảm bảo là group của chapter
-      });
-
-      if (conversation) {
-        await Conversation.findByIdAndUpdate(conversation._id, {
-          $addToSet: { members: newAccount._id },
-        });
-      }
-
-      return await this.getMemberById(newMember._id);
-    } catch (error) {
-      console.log(error);
-      return "Lỗi khi tạo đoàn viên";
     }
-  };
+
+    if (missingFields.length > 0) {
+      return `Vui lòng nhập đầy đủ các thông tin bắt buộc: ${missingFields.join(", ")}`;
+    }
+
+    // 🔍 KIỂM TRA ĐỊNH DẠNG EMAIL
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+      return "Email không đúng định dạng";
+    }
+
+    // 🔍 KIỂM TRA ĐỊNH DẠNG SỐ ĐIỆN THOẠI (10-11 số)
+    const phoneRegex = /^[0-9]{10,11}$/;
+    if (!phoneRegex.test(data.phoneNumber.replace(/\D/g, ""))) {
+      return "Số điện thoại không đúng định dạng (10-11 số)";
+    }
+
+    // 🔍 KIỂM TRA ĐỘ DÀI MẬT KHẨU
+    if (data.password.length < 6) {
+      return "Mật khẩu phải có ít nhất 6 ký tự";
+    }
+
+    // 🔍 KIỂM TRA NGÀY SINH HỢP LỆ
+    if (data.dateOfBirth) {
+      const birthDate = new Date(data.dateOfBirth);
+      const today = new Date();
+      if (birthDate > today) {
+        return "Ngày sinh không thể lớn hơn ngày hiện tại";
+      }
+    }
+
+    // 🔍 KIỂM TRA NGÀY VÀO ĐOÀN
+    if (data.joinedAt) {
+      const joinedDate = new Date(data.joinedAt);
+      const today = new Date();
+      if (joinedDate > today) {
+        return "Ngày vào đoàn không thể lớn hơn ngày hiện tại";
+      }
+    }
+
+    // 🔍 KIỂM TRA TÀI KHOẢN ĐÃ TỒN TẠI
+    const isAccountExisted = await accountService.checkIsAccountExisted(data);
+    if (typeof isAccountExisted === "string") return isAccountExisted;
+
+    // 🔍 KIỂM TRA ĐOÀN VIÊN ĐÃ TỒN TẠI
+    const isMemberExisted = await this.checkIsMemberExisted(data);
+    if (typeof isMemberExisted === "string") return isMemberExisted;
+
+    // 1️⃣ Tạo account member
+    const newAccount = new Account({
+      ...data,
+      displayName: data.fullName,
+      type: "member",
+    });
+
+    await newAccount.save();
+
+    // 2️⃣ Tạo member
+    const newMember = new Member({
+      ...data,
+      accountId: newAccount._id,
+    });
+
+    await newMember.save();
+
+    // 3️⃣ LẤY CHAPTER
+    const chapter = await Chapter.findById(data.chapterId)
+      .select("name accountId")
+      .lean();
+
+    if (!chapter) {
+      // Nếu chapter không tồn tại, xóa account đã tạo để đảm bảo tính toàn vẹn
+      await Account.findByIdAndDelete(newAccount._id);
+      return "Chi đoàn không tồn tại";
+    }
+
+    // 4️⃣ TÌM GROUP CHAT CỦA CHAPTER
+    const conversation = await Conversation.findOne({
+      name: `Nhóm chat ${chapter.name}`,
+      members: { $in: [chapter.accountId] },
+    });
+
+    if (conversation) {
+      await Conversation.findByIdAndUpdate(conversation._id, {
+        $addToSet: { members: newAccount._id },
+      });
+    }
+
+    return await this.getMemberById(newMember._id);
+  } catch (error) {
+    console.log(error);
+    return "Lỗi khi tạo đoàn viên";
+  }
+};
 
   getAllMembers = async () => {
     try {
@@ -199,7 +267,7 @@ getLeaderBoard = async (chapterId) => {
      1️⃣ LẤY DANH SÁCH ĐOÀN VIÊN
   ======================= */
   const members = await Member.find({ chapterId: chapterObjectId })
-    .select("_id fullName")
+    .populate("accountId")
     .lean();
 
   if (!members.length) return [];
@@ -304,6 +372,7 @@ getLeaderBoard = async (chapterId) => {
 
     return {
       memberId: member._id,
+      avatar: member?.accountId?.avatar?.url,
       fullName: member.fullName,
       activities: totalActivities,
       surveys: totalSurveys,
