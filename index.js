@@ -180,8 +180,8 @@ app.post("/api/calls/end", async (req, res) => {
   const io = SocketManager.getIO();
 
   console.log(`🔚 ${from} ended call ${callId}`);
-
-  io.to(to).emit("call:ended", {
+console.log([from, to])
+  io.to([from, to]).emit("call:ended", {
     from,
     to,
     callId,
