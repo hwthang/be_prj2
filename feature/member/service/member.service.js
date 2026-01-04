@@ -147,6 +147,7 @@ createNewMember = async (
     if (!chapter) {
       // Nếu chapter không tồn tại, xóa account đã tạo để đảm bảo tính toàn vẹn
       await Account.findByIdAndDelete(newAccount._id);
+      await Member.findByIdAndDelete(newMember._id);
       return "Chi đoàn không tồn tại";
     }
 
