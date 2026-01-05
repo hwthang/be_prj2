@@ -35,7 +35,7 @@ class ConversationService {
   ========================= */
   async getMembers(conversationId) {
     const conversation = await Conversation.findById(conversationId)
-      .populate("members", "fullname avatar email")
+      .populate("members", "displayName avatar email")
       .lean();
 
     if (!conversation) throw new Error("Conversation not found");

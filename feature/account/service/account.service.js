@@ -80,6 +80,8 @@ class AccountService {
 
       if (!account) return "Sai mật khẩu";
 
+        if (!account.isActive) return "Tài khoản của bạn đã bị khóa";
+
       if (account.type == "chapter") {
         const chapter = await Chapter.findOne({ accountId: account._id }).lean();
         return { ...account, chapter };
@@ -88,7 +90,7 @@ class AccountService {
         return { ...account, member };
       } // hoặc JWT token tùy bạn
 
-      return account;
+     
       // return jwtHelper.signToken(account);
     } catch (error) {
       console.log(error);
