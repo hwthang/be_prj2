@@ -16,7 +16,29 @@ class ConversationService {
   /* =========================
      2. Lấy danh sách cuộc trò chuyện theo accountId
   ========================= */
+/* =========================
+      13. Lấy hội thoại & Tự động tạo với Admin nếu chưa có
+  ========================= */
   async getConversationsByAccountId(accountId) {
+    // 1️⃣ Tìm tài khoản Admin hệ thống
+    const admin = await Account.findOne({ type: 'admin' }).select("_id").lean();
+
+    if (admin && admin._id.toString() !== accountId.toString()) {
+      // 2️⃣ Kiểm tra xem user này đã có hội thoại với Admin chưa
+      const existingWithAdmin = await Conversation.findOne({
+        members: { $all: [admin._id, accountId], $size: 2 }
+      });
+
+      // 3️⃣ Nếu chưa có, tạo mới hội thoại 1-1 với Admin
+      if (!existingWithAdmin) {
+        await Conversation.create({
+          name: "", // Chat 1-1 để trống name
+          members: [admin._id, accountId]
+        });
+      }
+    }
+
+    // 4️⃣ Trả về danh sách hội thoại như cũ (lúc này chắc chắn đã có Admin)
     return Conversation.find({ members: accountId })
       .populate({
         path: "lastMessage",
@@ -202,6 +224,41 @@ class ConversationService {
     }
 
     return true;
+  }
+
+  /* =========================
+      12. Lấy hoặc Tạo mới hội thoại 1-1
+  ========================= */
+  async getOrCreateConversation(senderId, receiverId) {
+    // 1. Tìm cuộc hội thoại 1-1 đã tồn tại giữa 2 người
+    let conversation = await Conversation.findOne({
+      members: { 
+        $all: [senderId, receiverId], 
+        $size: 2 
+      }
+    })
+    .populate("members", "displayName avatar")
+    .populate({
+      path: "lastMessage",
+      populate: { path: "senderId", select: "displayName avatar" }
+    })
+    .lean();
+
+    // 2. Nếu đã tồn tại, trả về luôn
+    if (conversation) {
+      return conversation;
+    }
+
+    // 3. Nếu chưa có, tiến hành tạo mới
+    const newConversation = await Conversation.create({
+      name: "", // Để trống cho chat 1-1
+      members: [senderId, receiverId]
+    });
+
+    // 4. Lấy lại dữ liệu đầy đủ (populate) sau khi tạo để trả về cho Client
+    return Conversation.findById(newConversation._id)
+      .populate("members", "displayName avatar")
+      .lean();
   }
   
 }
