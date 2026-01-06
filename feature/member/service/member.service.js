@@ -50,7 +50,7 @@ createNewMember = async (
   }
 ) => {
   try {
-    // 🔍 KIỂM TRA THÔNG TIN BẮT BUỘC
+    // 🔍 1. KIỂM TRA THÔNG TIN BẮT BUỘC
     const requiredFields = [
       { field: "username", name: "Tên đăng nhập" },
       { field: "password", name: "Mật khẩu" },
@@ -68,104 +68,88 @@ createNewMember = async (
       { field: "joinedAt", name: "Ngày vào đoàn" },
     ];
 
-    const missingFields = [];
-    for (const { field, name } of requiredFields) {
-      if (!data[field] || data[field].toString().trim() === "") {
-        missingFields.push(name);
-      }
-    }
+    const missingFields = requiredFields
+      .filter(({ field }) => !data[field] || data[field].toString().trim() === "")
+      .map(({ name }) => name);
 
     if (missingFields.length > 0) {
       return `Vui lòng nhập đầy đủ các thông tin bắt buộc: ${missingFields.join(", ")}`;
     }
 
-    // 🔍 KIỂM TRA ĐỊNH DẠNG EMAIL
+    // 🔍 2. KIỂM TRA ĐỊNH DẠNG & LOGIC DỮ LIỆU
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-      return "Email không đúng định dạng";
-    }
+    if (!emailRegex.test(data.email)) return "Email không đúng định dạng";
 
-    // 🔍 KIỂM TRA ĐỊNH DẠNG SỐ ĐIỆN THOẠI (10-11 số)
     const phoneRegex = /^[0-9]{10,11}$/;
-    if (!phoneRegex.test(data.phoneNumber.replace(/\D/g, ""))) {
-      return "Số điện thoại không đúng định dạng (10-11 số)";
-    }
+    if (!phoneRegex.test(data.phoneNumber.replace(/\D/g, ""))) return "Số điện thoại không đúng định dạng";
 
-    // 🔍 KIỂM TRA ĐỘ DÀI MẬT KHẨU
-    if (data.password.length < 6) {
-      return "Mật khẩu phải có ít nhất 6 ký tự";
-    }
+    if (data.password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
 
-    // 🔍 KIỂM TRA NGÀY SINH HỢP LỆ
-    if (data.dateOfBirth) {
-      const birthDate = new Date(data.dateOfBirth);
-      const today = new Date();
-      if (birthDate > today) {
-        return "Ngày sinh không thể lớn hơn ngày hiện tại";
-      }
-    }
+    const today = new Date();
+    if (new Date(data.dateOfBirth) > today) return "Ngày sinh không hợp lệ";
+    if (new Date(data.joinedAt) > today) return "Ngày vào đoàn không hợp lệ";
 
-    // 🔍 KIỂM TRA NGÀY VÀO ĐOÀN
-    if (data.joinedAt) {
-      const joinedDate = new Date(data.joinedAt);
-      const today = new Date();
-      if (joinedDate > today) {
-        return "Ngày vào đoàn không thể lớn hơn ngày hiện tại";
-      }
-    }
-
-    // 🔍 KIỂM TRA TÀI KHOẢN ĐÃ TỒN TẠI
+    // 🔍 3. KIỂM TRA TỒN TẠI
     const isAccountExisted = await accountService.checkIsAccountExisted(data);
     if (typeof isAccountExisted === "string") return isAccountExisted;
 
-    // 🔍 KIỂM TRA ĐOÀN VIÊN ĐÃ TỒN TẠI
     const isMemberExisted = await this.checkIsMemberExisted(data);
     if (typeof isMemberExisted === "string") return isMemberExisted;
 
-    // 1️⃣ Tạo account member
+    const chapter = await Chapter.findById(data.chapterId).select("name accountId").lean();
+    if (!chapter) return "Chi đoàn không tồn tại";
+
+    // 🚀 4. THỰC THI TẠO DỮ LIỆU
+    // 4.1 Tạo account
     const newAccount = new Account({
       ...data,
       displayName: data.fullName,
       type: "member",
     });
-
     await newAccount.save();
 
-    // 2️⃣ Tạo member
+    // 4.2 Tạo member
     const newMember = new Member({
       ...data,
       accountId: newAccount._id,
     });
-
     await newMember.save();
 
-    // 3️⃣ LẤY CHAPTER
-    const chapter = await Chapter.findById(data.chapterId)
-      .select("name accountId")
-      .lean();
-
-    if (!chapter) {
-      // Nếu chapter không tồn tại, xóa account đã tạo để đảm bảo tính toàn vẹn
-      await Account.findByIdAndDelete(newAccount._id);
-      await Member.findByIdAndDelete(newMember._id);
-      return "Chi đoàn không tồn tại";
-    }
-
-    // 4️⃣ TÌM GROUP CHAT CỦA CHAPTER
-    const conversation = await Conversation.findOne({
+    // 📩 5. XỬ LÝ HỘI THOẠI (CONVERSATIONS)
+    
+    // 5.1 Thêm vào Group Chat chung của Chi đoàn
+    const groupConversation = await Conversation.findOne({
       name: `Nhóm chat ${chapter.name}`,
       members: { $in: [chapter.accountId] },
     });
 
-    if (conversation) {
-      await Conversation.findByIdAndUpdate(conversation._id, {
+    if (groupConversation) {
+      await Conversation.findByIdAndUpdate(groupConversation._id, {
         $addToSet: { members: newAccount._id },
       });
     }
 
+    // 5.2 Tạo hội thoại 1-1 với TẤT CẢ đoàn viên khác trong chi đoàn
+    const otherMembers = await Member.find({
+      chapterId: data.chapterId,
+      _id: { $ne: newMember._id }, // Loại trừ chính mình
+    }).select("accountId");
+
+    if (otherMembers.length > 0) {
+      const privateConvs = otherMembers.map((m) => ({
+        name: "", // Chat 1-1 thường không cần tên cố định
+        members: [newAccount._id, m.accountId],
+        type: "private", // Giả định model có type để phân biệt group/private
+      }));
+
+      // insertMany để tối ưu hóa hiệu suất thay vì dùng vòng lặp save()
+      await Conversation.insertMany(privateConvs);
+    }
+
     return await this.getMemberById(newMember._id);
+
   } catch (error) {
-    console.log(error);
+    console.error("Error at createNewMember:", error);
     return "Lỗi khi tạo đoàn viên";
   }
 };
